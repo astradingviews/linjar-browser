@@ -1,0 +1,32 @@
+name: Build APK
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci --legacy-peer-deps
+      - run: npx tsc --noEmit
+      - run: npx expo prebuild --platform android --no-install
+      - name: Gradle assembleRelease
+        working-directory: frontend/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apex-browser-apk
+          path: frontend/android/app/build/outputs/apk/release/*.apk
